@@ -1,367 +1,1004 @@
 <!DOCTYPE html>
-<html lang="fi">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Fish Engine | Core Pong Deluxe</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fish Engine | Pong Deluxe</title>
     <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
         body { 
-            background: #050505; color: #0f0; font-family: monospace; 
-            margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; 
-            overflow: hidden; user-select: none;
+            background: #050505; 
+            color: #0f0; 
+            font-family: 'Courier New', monospace; 
+            overflow: hidden;
+            user-select: none;
         }
-        .stats { width: 1024px; display: flex; justify-between: space-between; margin-bottom: 8px; font-size: 20px; font-weight: bold; text-shadow: 0 0 8px #0f0; }
-        .canvas-container { position: relative; width: 1024px; height: 576px; }
-        canvas { 
-            border: 2px solid #0f0; background: #000; cursor: none; 
-            box-shadow: 0 0 20px rgba(0, 255, 0, 0.3); 
+
+        #main-container {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
         }
+
+        /* MENU SCREEN */
+        #menu-screen {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            animation: menuFade 0.5s ease-out;
+        }
+
+        #menu-screen.hidden { display: none; }
+
+        @keyframes menuFade {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .menu-title {
+            font-size: 64px;
+            font-weight: bold;
+            text-shadow: 0 0 20px #0f0;
+            margin-bottom: 40px;
+            letter-spacing: 2px;
+            animation: glitch 0.3s infinite;
+        }
+
+        @keyframes glitch {
+            0%, 100% { text-shadow: 0 0 20px #0f0; }
+            50% { text-shadow: 0 0 30px #0f0, -2px 0 #ff00ff, 2px 0 #00ffff; }
+        }
+
+        .menu-section {
+            margin: 30px 0;
+            text-align: center;
+        }
+
+        .menu-label {
+            font-size: 18px;
+            margin-bottom: 15px;
+            text-shadow: 0 0 10px #0f0;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 15px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .menu-button {
+            padding: 15px 30px;
+            font-size: 18px;
+            background: #000;
+            color: #0f0;
+            border: 2px solid #0f0;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            transition: all 0.2s;
+            box-shadow: 0 0 10px rgba(0, 255, 0, 0.3);
+            font-weight: bold;
+        }
+
+        .menu-button:hover {
+            background: #0f0;
+            color: #000;
+            box-shadow: 0 0 20px #0f0;
+            transform: scale(1.05);
+        }
+
+        .menu-button.active {
+            background: #0f0;
+            color: #000;
+            box-shadow: 0 0 25px #0f0;
+        }
+
+        .start-button {
+            padding: 20px 50px;
+            font-size: 24px;
+            margin-top: 40px;
+        }
+
+        .controls-info {
+            margin-top: 50px;
+            font-size: 14px;
+            color: #0a0;
+            text-align: center;
+            line-height: 1.8;
+        }
+
+        /* GAME SCREEN */
+        #game-screen {
+            position: relative;
+            width: 100%;
+            height: 100%;
+        }
+
+        #game-screen.hidden { display: none; }
+
+        .game-hud {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 20px;
+            font-size: 16px;
+            font-weight: bold;
+            color: #0f0;
+            text-shadow: 0 0 10px #0f0;
+            background: #000;
+            border-bottom: 1px solid #0f0;
+        }
+
+        .player-stat {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            font-size: 14px;
+        }
+
+        .stat-box {
+            background: rgba(0, 255, 0, 0.1);
+            border: 1px solid #0f0;
+            padding: 6px 12px;
+            border-radius: 2px;
+            font-size: 13px;
+        }
+
+        .game-title {
+            text-align: center;
+            font-size: 14px;
+            letter-spacing: 0.5px;
+        }
+
+        .canvas-container {
+            position: relative;
+            width: 1024px;
+            height: 576px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto;
+        }
+
+        canvas {
+            border: 3px solid #0f0;
+            background: #000;
+            box-shadow: 0 0 30px rgba(0, 255, 0, 0.4), inset 0 0 30px rgba(0, 0, 0, 0.5);
+            display: block;
+        }
+
         .scanlines {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
             background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
-            background-size: 100% 4px; pointer-events: none; z-index: 2;
+            background-size: 100% 4px;
+            pointer-events: none;
+            z-index: 2;
         }
-        #boot { 
-            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            background: #000; border: 3px solid #0f0; color: #0f0; padding: 25px 40px; 
-            font-size: 24px; font-family: monospace; cursor: pointer; z-index: 10;
-            box-shadow: 0 0 15px #0f0; text-align: center;
+
+        #pause-overlay {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
         }
-        #boot:hover { background: #0f0; color: #000; box-shadow: 0 0 30px #0f0; }
-        .hud-hint { font-size: 12px; color: #0a0; text-align: center; margin-top: 5px; }
+
+        #pause-overlay.active {
+            display: flex;
+        }
+
+        .pause-text {
+            font-size: 48px;
+            font-weight: bold;
+            text-shadow: 0 0 20px #0f0;
+            margin-bottom: 30px;
+        }
+
+        .pause-hint {
+            font-size: 16px;
+            color: #0a0;
+        }
+
+        #game-over-overlay {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 60;
+        }
+
+        #game-over-overlay.active {
+            display: flex;
+        }
+
+        .game-over-content {
+            text-align: center;
+        }
+
+        .game-over-title {
+            font-size: 56px;
+            font-weight: bold;
+            text-shadow: 0 0 20px #0f0;
+            margin-bottom: 20px;
+        }
+
+        .game-over-stats {
+            font-size: 18px;
+            color: #0a0;
+            margin: 20px 0;
+            line-height: 2;
+        }
+
+        .game-over-buttons {
+            margin-top: 30px;
+            display: flex;
+            gap: 20px;
+        }
+
+        .game-over-buttons button {
+            padding: 15px 30px;
+            font-size: 16px;
+            background: #000;
+            color: #0f0;
+            border: 2px solid #0f0;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+
+        .game-over-buttons button:hover {
+            background: #0f0;
+            color: #000;
+            box-shadow: 0 0 20px #0f0;
+        }
+
+        /* RESPONSIVE */
+        @media (max-width: 768px) {
+            .menu-title { font-size: 40px; }
+            .menu-button { padding: 12px 20px; font-size: 14px; }
+            .game-hud { padding: 10px 15px; font-size: 14px; }
+            canvas { max-width: 100%; height: auto; }
+        }
     </style>
 </head>
 <body>
 
-    <div class="stats">
-        <span>PLAYER: <span id="s1">0</span> <span id="p1-boost" style="font-size: 14px; color: #0f0;">[BOOST READY]</span></span>
-        <span>CORE PONG 576p</span>
-        <span>AI: <span id="s2">0</span></span>
+<div id="main-container">
+    <!-- MENU SCREEN -->
+    <div id="menu-screen">
+        <div class="menu-title">PONG DELUXE</div>
+        
+        <div class="menu-section">
+            <div class="menu-label">GAME MODE</div>
+            <div class="button-group">
+                <button class="menu-button active" data-mode="vs-ai">VS AI</button>
+                <button class="menu-button" data-mode="vs-player">2 PLAYER</button>
+            </div>
+        </div>
+
+        <div class="menu-section">
+            <div class="menu-label">DIFFICULTY</div>
+            <div class="button-group">
+                <button class="menu-button active" data-difficulty="easy">EASY</button>
+                <button class="menu-button" data-difficulty="normal">NORMAL</button>
+                <button class="menu-button" data-difficulty="hard">HARD</button>
+                <button class="menu-button" data-difficulty="insane">INSANE</button>
+            </div>
+        </div>
+
+        <div class="menu-section">
+            <div class="menu-label">CONTROLS</div>
+            <div class="button-group">
+                <button class="menu-button active" data-controls="mouse">MOUSE</button>
+                <button class="menu-button" data-controls="keyboard">KEYBOARD</button>
+            </div>
+        </div>
+
+        <button class="menu-button start-button" id="start-btn">[ START GAME ]</button>
+
+        <div class="controls-info" id="controls-display">
+            <strong>MOUSE MODE:</strong><br>
+            Move mouse to control paddle | SPACEBAR = Boost<br>
+            <br>
+            <strong>2-PLAYER KEYBOARD:</strong><br>
+            P1: W/S or UP/DOWN | P2: I/K or ARROW UP/DOWN<br>
+            P1 SPACEBAR = Boost | P2 SHIFT = Boost<br>
+        </div>
     </div>
 
-    <div class="canvas-container">
-        <canvas id="game"></canvas>
-        <div class="scanlines"></div>
-        <div id="boot" onclick="start()">[ START GAME Engine v2.0 ]</div>
+    <!-- GAME SCREEN -->
+    <div id="game-screen" class="hidden">
+        <div class="game-hud">
+            <div class="player-stat">
+                <span id="p1-name">P1</span>
+                <div class="stat-box">
+                    <span id="p1-score">0</span> PTS
+                </div>
+                <div class="stat-box" id="p1-boost-display">
+                    <span id="p1-boost-bar">■■■■■</span>
+                </div>
+            </div>
+
+            <div class="game-title">
+                <span id="difficulty-display">EASY</span> | 
+                <span id="mode-display">VS AI</span> |
+                <span id="rally-display">RALLY: 0</span>
+            </div>
+
+            <div class="player-stat" style="justify-content: flex-end;">
+                <div class="stat-box" id="p2-boost-display">
+                    <span id="p2-boost-bar">■■■■■</span>
+                </div>
+                <div class="stat-box">
+                    <span id="p2-score">0</span> PTS
+                </div>
+                <span id="p2-name">AI</span>
+            </div>
+        </div>
+
+        <div class="canvas-container">
+            <canvas id="game"></canvas>
+            <div class="scanlines"></div>
+            <div id="pause-overlay">
+                <div class="pause-text">PAUSED</div>
+                <div class="pause-hint">PRESS P TO RESUME | ESC TO MENU</div>
+            </div>
+            <div id="game-over-overlay">
+                <div class="game-over-content">
+                    <div class="game-over-title" id="game-over-text">GAME OVER</div>
+                    <div class="game-over-stats">
+                        <div id="winner-text">Winner: P1</div>
+                        <div id="final-score">Score: 0 - 0</div>
+                        <div id="final-stats">Rally: 0 | Speed: 0</div>
+                    </div>
+                    <div class="game-over-buttons">
+                        <button onclick="returnToMenu()">MENU</button>
+                        <button onclick="restartGame()">PLAY AGAIN</button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-    <div class="hud-hint">CONTROLS: Mouse to move | SPACEBAR to activate Speed Boost</div>
+</div>
 
-    <script>
-        const canvas = document.getElementById('game');
-        const ctx = canvas.getContext('2d');
-        canvas.width = 1024; canvas.height = 576;
+<script>
+    // ===== GAME STATE =====
+    let gameState = {
+        mode: 'vs-ai',
+        difficulty: 'easy',
+        controlMode: 'mouse',
+        isRunning: false,
+        isPaused: false,
+        score1: 0,
+        score2: 0,
+        rally: 0,
+        maxRally: 0,
+        maxSpeed: 0
+    };
 
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        function playSound(freq, type, duration) {
-            try {
-                let osc = audioCtx.createOscillator();
-                let gain = audioCtx.createGain();
-                osc.type = type;
-                osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
-                osc.connect(gain);
-                gain.connect(audioCtx.destination);
-                osc.start();
-                osc.stop(audioCtx.currentTime + duration);
-            } catch(e){}
-        }
+    const difficultySettings = {
+        easy: { aiSpeed: 3.5, ballSpeed: 8, maxSpeed: 18, powerupChance: 0.4 },
+        normal: { aiSpeed: 5, ballSpeed: 9, maxSpeed: 20, powerupChance: 0.35 },
+        hard: { aiSpeed: 6.5, ballSpeed: 10, maxSpeed: 22, powerupChance: 0.3 },
+        insane: { aiSpeed: 8, ballSpeed: 11, maxSpeed: 24, powerupChance: 0.25 }
+    };
 
-        let balls = [];
-        let p1y = 288, p2y = 288;
-        let p1h = 100, p2h = 100;
-        let p1Boost = 100, p1BoostActive = false;
-        let score1 = 0, score2 = 0;
-        let running = false;
-        const pw = 18;
+    // ===== AUDIO =====
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-        let shakeTime = 0;
-        let particles = [];
-        let powerups = [];
-        let lasers = [];
-        let floatingTexts = [];
+    function playSound(freq, type, duration, volume = 0.1) {
+        try {
+            let osc = audioCtx.createOscillator();
+            let gain = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            gain.gain.setValueAtTime(volume, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + duration);
+        } catch(e) {}
+    }
 
-        function start() {
-            if (audioCtx.state === 'suspended') audioCtx.resume();
-            document.getElementById('boot').style.display = 'none';
-            running = true;
-            resetGame();
-            loop();
-        }
+    function playPowerupSound() {
+        playSound(600, 'square', 0.15, 0.15);
+        playSound(800, 'square', 0.1, 0.1);
+    }
 
-        function resetGame() {
-            balls = [createBall()];
-            powerups = [];
-            lasers = [];
-        }
+    // ===== CANVAS & DRAWING =====
+    const canvas = document.getElementById('game');
+    const ctx = canvas.getContext('2d');
+    
+    // Locked to 1024x576 for chromebook 311 display
+    canvas.width = 1024;
+    canvas.height = 576;
 
-        function createBall() {
-            let speed = 8;
-            let angle = (Math.random() * Math.PI / 3) - Math.PI / 6;
-            let dir = Math.random() > 0.5 ? 1 : -1;
-            return {
-                x: 512, y: 288,
-                dx: dir * speed * Math.cos(angle),
-                dy: speed * Math.sin(angle),
-                r: 10,
-                trail: []
-            };
-        }
+    const GAME_WIDTH = 1024;
+    const GAME_HEIGHT = 576;
+    const PADDLE_WIDTH = 18;
+    const PADDLE_HEIGHT = 100;
 
-        function addFloatingText(txt, x, y) {
-            floatingTexts.push({ txt: txt, x: x, y: y, life: 40, alpha: 1 });
-        }
+    // ===== GAME OBJECTS =====
+    let balls = [];
+    let p1 = { y: GAME_HEIGHT / 2 - PADDLE_HEIGHT / 2, h: PADDLE_HEIGHT, boost: 100, boostActive: false };
+    let p2 = { y: GAME_HEIGHT / 2 - PADDLE_HEIGHT / 2, h: PADDLE_HEIGHT, boost: 100, boostActive: false };
+    
+    let shakeTime = 0;
+    let particles = [];
+    let powerups = [];
+    let lasers = [];
+    let floatingTexts = [];
 
-        function triggerShake(dur) { shakeTime = dur; }
+    // ===== INPUT HANDLING =====
+    let keys = {};
+    let mouseY = GAME_HEIGHT / 2;
 
-        function spawnParticles(x, y, color = "#0f0", count = 15) {
-            for(let i = 0; i < count; i++) {
-                particles.push({
-                    x: x, y: y,
-                    dx: (Math.random() - 0.5) * 8,
-                    dy: (Math.random() - 0.5) * 8,
-                    life: 25, color: color
-                });
-            }
-        }
-
-        function spawnPowerup() {
-            if (powerups.length < 2 && Math.random() < 0.35) {
-                const types = ['BIG', 'FAST', 'LASER', 'MULTI'];
-                powerups.push({
-                    x: 250 + Math.random() * 524,
-                    y: 60 + Math.random() * 456,
-                    type: types[Math.floor(Math.random() * types.length)],
-                    r: 18,
-                    pulse: 0
-                });
-            }
-        }
-
-        window.onmousemove = (e) => {
+    window.addEventListener('mousemove', (e) => {
+        if (gameState.controlMode === 'mouse' && gameState.isRunning) {
             let rect = canvas.getBoundingClientRect();
-            p1y = e.clientY - rect.top - p1h/2;
+            mouseY = e.clientY - rect.top;
+        }
+    });
+
+    window.addEventListener('keydown', (e) => {
+        keys[e.code] = true;
+
+        if (e.code === 'KeyP' && gameState.isRunning) {
+            togglePause();
+        }
+        if (e.code === 'Escape' && gameState.isRunning) {
+            returnToMenu();
+        }
+        if (e.code === 'Space' && !gameState.isPaused) {
+            handleBoost('p1');
+        }
+        if (e.code === 'ShiftLeft' && !gameState.isPaused && gameState.mode === 'vs-player') {
+            handleBoost('p2');
+        }
+    });
+
+    window.addEventListener('keyup', (e) => {
+        keys[e.code] = false;
+    });
+
+    function handleBoost(player) {
+        let p = player === 'p1' ? p1 : p2;
+        if (p.boost >= 30 && !p.boostActive) {
+            p.boostActive = true;
+            p.boost -= 30;
+            playSound(600, 'square', 0.2, 0.15);
+            addFloatingText('BOOST!', player === 'p1' ? 100 : GAME_WIDTH - 100, p.y);
+            setTimeout(() => { p.boostActive = false; }, 1500);
+        }
+    }
+
+    // ===== GAME OBJECTS =====
+    function createBall() {
+        let settings = difficultySettings[gameState.difficulty];
+        let speed = settings.ballSpeed;
+        let angle = (Math.random() * Math.PI / 3) - Math.PI / 6;
+        let dir = Math.random() > 0.5 ? 1 : -1;
+        return {
+            x: GAME_WIDTH / 2,
+            y: GAME_HEIGHT / 2,
+            dx: dir * speed * Math.cos(angle),
+            dy: speed * Math.sin(angle),
+            r: 10,
+            trail: []
         };
+    }
 
-        window.onkeydown = (e) => {
-            if (e.code === 'Space' && p1Boost >= 30 && !p1BoostActive) {
-                p1BoostActive = true;
-                p1Boost -= 30;
-                playSound(600, 'square', 0.2);
-                addFloatingText("BOOST!", 100, p1y);
-                setTimeout(() => p1BoostActive = false, 1500);
-            }
-        };
+    function addFloatingText(txt, x, y) {
+        floatingTexts.push({ txt: txt, x: x, y: y, life: 60, alpha: 1 });
+    }
 
-        function update() {
-            if (p1Boost < 100) p1Boost += 0.15;
-            document.getElementById('p1-boost').innerText = p1Boost >= 30 ? "[BOOST READY]" : "[RECHARGING]";
+    function triggerShake(dur) {
+        shakeTime = Math.max(shakeTime, dur);
+    }
 
-            for (let bIdx = balls.length - 1; bIdx >= 0; bIdx--) {
-                let ball = balls[bIdx];
+    function spawnParticles(x, y, color = "#0f0", count = 15) {
+        for(let i = 0; i < count; i++) {
+            particles.push({
+                x: x, y: y,
+                dx: (Math.random() - 0.5) * 8,
+                dy: (Math.random() - 0.5) * 8,
+                life: 30, color: color
+            });
+        }
+    }
 
-                ball.trail.push({x: ball.x, y: ball.y});
-                if (ball.trail.length > 10) ball.trail.shift();
+    function spawnPowerup() {
+        let settings = difficultySettings[gameState.difficulty];
+        if (powerups.length < 2 && Math.random() < settings.powerupChance) {
+            const types = ['BIG', 'FAST', 'LASER', 'MULTI', 'SHIELD', 'SLOW'];
+            powerups.push({
+                x: 250 + Math.random() * (GAME_WIDTH - 500),
+                y: 60 + Math.random() * (GAME_HEIGHT - 120),
+                type: types[Math.floor(Math.random() * types.length)],
+                r: 18,
+                pulse: 0
+            });
+        }
+    }
 
-                let currentSpeedMult = p1BoostActive && ball.dx < 0 ? 1.5 : 1.0;
-                ball.x += ball.dx * currentSpeedMult;
-                ball.y += ball.dy * currentSpeedMult;
+    // ===== UPDATE LOGIC =====
+    function update() {
+        // Boost recharge
+        if (p1.boost < 100) p1.boost += 0.2;
+        if (p2.boost < 100) p2.boost += 0.2;
 
-                if(ball.y - ball.r <= 0) {
-                    ball.y = ball.r;
-                    ball.dy *= -1;
-                    triggerShake(3);
-                    playSound(300, 'sine', 0.05);
-                } else if (ball.y + ball.r >= canvas.height) {
-                    ball.y = canvas.height - ball.r;
-                    ball.dy *= -1;
-                    triggerShake(3);
-                    playSound(300, 'sine', 0.05);
-                }
-
-                if(ball.dx < 0 && ball.x - ball.r <= 15 + pw && ball.x + ball.r >= 15) {
-                    if(ball.y > p1y && ball.y < p1y + p1h) {
-                        let hitPoint = (ball.y - (p1y + p1h/2)) / (p1h/2);
-                        let speed = Math.min(Math.hypot(ball.dx, ball.dy) + 0.5, 18);
-                        let angle = hitPoint * (Math.PI / 3);
-                        
-                        ball.dx = speed * Math.cos(angle);
-                        ball.dy = speed * Math.sin(angle);
-                        ball.x = 15 + pw + ball.r;
-
-                        triggerShake(6);
-                        spawnParticles(ball.x, ball.y, "#0f0");
-                        playSound(450, 'triangle', 0.08);
-                        spawnPowerup();
-                    }
-                }
-
-                if(ball.dx > 0 && ball.x + ball.r >= canvas.width - 25 && ball.x - ball.r <= canvas.width - 25 + pw) {
-                    if(ball.y > p2y && ball.y < p2y + p2h) {
-                        let hitPoint = (ball.y - (p2y + p2h/2)) / (p2h/2);
-                        let speed = Math.min(Math.hypot(ball.dx, ball.dy) + 0.5, 18);
-                        let angle = hitPoint * (Math.PI / 3);
-
-                        ball.dx = -speed * Math.cos(angle);
-                        ball.dy = speed * Math.sin(angle);
-                        ball.x = canvas.width - 25 - ball.r;
-
-                        triggerShake(6);
-                        spawnParticles(ball.x, ball.y, "#f00");
-                        playSound(400, 'triangle', 0.08);
-                        spawnPowerup();
-                    }
-                }
-
-                for (let i = powerups.length - 1; i >= 0; i--) {
-                    let pow = powerups[i];
-                    let dist = Math.hypot(ball.x - pow.x, ball.y - pow.y);
-                    if (dist < ball.r + pow.r) {
-                        playSound(800, 'square', 0.15);
-                        spawnParticles(pow.x, pow.y, "#fff", 20);
-
-                        if (pow.type === 'BIG') {
-                            if (ball.dx > 0) { p1h = 160; addFloatingText("P1 PADDLE XL", 80, p1y); } 
-                            else { p2h = 160; addFloatingText("AI PADDLE XL", 800, p2y); }
-                            setTimeout(() => { p1h = 100; p2h = 100; }, 8000);
-                        } else if (pow.type === 'FAST') {
-                            ball.dx *= 1.4; ball.dy *= 1.4;
-                            addFloatingText("HYPER BALL!", pow.x, pow.y);
-                        } else if (pow.type === 'LASER') {
-                            lasers.push({ x: ball.dx > 0 ? 30 : canvas.width - 30, y: ball.dx > 0 ? p1y + p1h/2 : p2y + p2h/2, dir: ball.dx > 0 ? 1 : -1 });
-                            addFloatingText("LASER SHOT!", pow.x, pow.y);
-                        } else if (pow.type === 'MULTI') {
-                            balls.push(createBall());
-                            addFloatingText("MULTI-BALL!", pow.x, pow.y);
-                        }
-                        powerups.splice(i, 1);
-                    }
-                }
-
-                if(ball.x < 0) {
-                    score2++;
-                    playSound(150, 'sawtooth', 0.3);
-                    triggerShake(18);
-                    spawnParticles(0, ball.y, "#f00", 30);
-                    balls.splice(bIdx, 1);
-                    if (balls.length === 0) resetGame();
-                } else if(ball.x > canvas.width) {
-                    score1++;
-                    playSound(700, 'sine', 0.3);
-                    triggerShake(18);
-                    spawnParticles(canvas.width, ball.y, "#0f0", 30);
-                    balls.splice(bIdx, 1);
-                    if (balls.length === 0) resetGame();
-                }
-            }
-
-            for (let i = lasers.length - 1; i >= 0; i--) {
-                let l = lasers[i];
-                l.x += l.dir * 16;
-                if (l.dir === 1 && l.x >= canvas.width - 25) {
-                    if (l.y > p2y && l.y < p2y + p2h) { p2h = Math.max(30, p2h - 30); addFloatingText("SHRINK!", 800, p2y); }
-                    lasers.splice(i, 1);
-                } else if (l.dir === -1 && l.x <= 25) {
-                    if (l.y > p1y && l.y < p1y + p1h) { p1h = Math.max(30, p1h - 30); addFloatingText("SHRINK!", 80, p1y); }
-                    lasers.splice(i, 1);
-                }
-            }
-
-            for(let i = particles.length - 1; i >= 0; i--) {
-                let p = particles[i];
-                p.x += p.dx; p.y += p.dy;
-                p.life--;
-                if(p.life <= 0) particles.splice(i, 1);
-            }
-
-            for(let i = floatingTexts.length - 1; i >= 0; i--) {
-                let ft = floatingTexts[i];
-                ft.y -= 1; ft.life--; ft.alpha = ft.life / 40;
-                if(ft.life <= 0) floatingTexts.splice(i, 1);
-            }
-
-            if (balls.length > 0) {
-                let primaryBall = balls[0];
-                let aiSpeed = 5.0;
-                if (p2y + p2h/2 < primaryBall.y - 10) p2y += aiSpeed;
-                else if (p2y + p2h/2 > primaryBall.y + 10) p2y -= aiSpeed;
-            }
-
-            document.getElementById('s1').innerText = score1;
-            document.getElementById('s2').innerText = score2;
+        // Paddle movement
+        if (gameState.controlMode === 'mouse') {
+            p1.y = Math.max(0, Math.min(GAME_HEIGHT - p1.h, mouseY - p1.h / 2));
+        } else {
+            // Keyboard controls
+            if (keys['KeyW'] || keys['ArrowUp']) p1.y = Math.max(0, p1.y - 6);
+            if (keys['KeyS'] || keys['ArrowDown']) p1.y = Math.min(GAME_HEIGHT - p1.h, p1.y + 6);
         }
 
-        function draw() {
-            ctx.save();
+        if (gameState.mode === 'vs-player') {
+            if (keys['KeyI'] || keys['ArrowUp']) p2.y = Math.max(0, p2.y - 6);
+            if (keys['KeyK'] || keys['ArrowDown']) p2.y = Math.min(GAME_HEIGHT - p2.h, p2.y + 6);
+        }
 
-            if (shakeTime > 0) {
-                let dx = (Math.random() - 0.5) * shakeTime;
-                let dy = (Math.random() - 0.5) * shakeTime;
-                ctx.translate(dx, dy);
-                shakeTime--;
+        // Ball physics
+        for (let bIdx = balls.length - 1; bIdx >= 0; bIdx--) {
+            let ball = balls[bIdx];
+
+            ball.trail.push({x: ball.x, y: ball.y});
+            if (ball.trail.length > 15) ball.trail.shift();
+
+            let speedMult1 = p1.boostActive && ball.dx < 0 ? 1.4 : 1.0;
+            let speedMult2 = p2.boostActive && ball.dx > 0 ? 1.4 : 1.0;
+            let currentSpeedMult = Math.max(speedMult1, speedMult2);
+
+            ball.x += ball.dx * currentSpeedMult;
+            ball.y += ball.dy * currentSpeedMult;
+
+            let speed = Math.hypot(ball.dx, ball.dy);
+            if (speed > difficultySettings[gameState.difficulty].maxSpeed) {
+                let scale = difficultySettings[gameState.difficulty].maxSpeed / speed;
+                ball.dx *= scale;
+                ball.dy *= scale;
+            }
+            gameState.maxSpeed = Math.max(gameState.maxSpeed, Math.hypot(ball.dx, ball.dy));
+
+            // Top/bottom collision
+            if(ball.y - ball.r <= 0) {
+                ball.y = ball.r;
+                ball.dy *= -1;
+                triggerShake(3);
+                playSound(300, 'sine', 0.05);
+            } else if (ball.y + ball.r >= GAME_HEIGHT) {
+                ball.y = GAME_HEIGHT - ball.r;
+                ball.dy *= -1;
+                triggerShake(3);
+                playSound(300, 'sine', 0.05);
             }
 
-            ctx.fillStyle = "#000";
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            // P1 paddle collision
+            if(ball.dx < 0 && ball.x - ball.r <= 15 + PADDLE_WIDTH && ball.x + ball.r >= 15) {
+                if(ball.y > p1.y && ball.y < p1.y + p1.h) {
+                    let hitPoint = (ball.y - (p1.y + p1.h/2)) / (p1.h/2);
+                    let speed = Math.min(Math.hypot(ball.dx, ball.dy) + 0.8, difficultySettings[gameState.difficulty].maxSpeed);
+                    let angle = hitPoint * (Math.PI / 3);
+                    
+                    ball.dx = speed * Math.cos(angle);
+                    ball.dy = speed * Math.sin(angle);
+                    ball.x = 15 + PADDLE_WIDTH + ball.r;
 
-            ctx.strokeStyle = "rgba(0, 255, 0, 0.15)";
-            ctx.setLineDash([8, 8]);
-            ctx.beginPath();
-            ctx.moveTo(canvas.width / 2, 0); ctx.lineTo(canvas.width / 2, canvas.height);
-            ctx.stroke();
-            ctx.setLineDash([]);
-
-            for (let ball of balls) {
-                for (let i = 0; i < ball.trail.length; i++) {
-                    let t = ball.trail[i];
-                    ctx.fillStyle = `rgba(0, 255, 0, ${(i + 1) / ball.trail.length * 0.35})`;
-                    ctx.beginPath();
-                    ctx.arc(t.x, t.y, ball.r * ((i + 1) / ball.trail.length), 0, Math.PI * 2);
-                    ctx.fill();
+                    triggerShake(6);
+                    spawnParticles(ball.x, ball.y, "#0f0");
+                    playSound(450, 'triangle', 0.08);
+                    spawnPowerup();
+                    gameState.rally++;
                 }
-                ctx.fillStyle = "#0f0";
-                ctx.beginPath(); 
-                ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI*2); 
+            }
+
+            // P2 paddle collision
+            if(ball.dx > 0 && ball.x + ball.r >= GAME_WIDTH - 25 && ball.x - ball.r <= GAME_WIDTH - 25 + PADDLE_WIDTH) {
+                if(ball.y > p2.y && ball.y < p2.y + p2.h) {
+                    let hitPoint = (ball.y - (p2.y + p2.h/2)) / (p2.h/2);
+                    let speed = Math.min(Math.hypot(ball.dx, ball.dy) + 0.8, difficultySettings[gameState.difficulty].maxSpeed);
+                    let angle = hitPoint * (Math.PI / 3);
+
+                    ball.dx = -speed * Math.cos(angle);
+                    ball.dy = speed * Math.sin(angle);
+                    ball.x = GAME_WIDTH - 25 - ball.r;
+
+                    triggerShake(6);
+                    spawnParticles(ball.x, ball.y, "#f00");
+                    playSound(400, 'triangle', 0.08);
+                    spawnPowerup();
+                    gameState.rally++;
+                }
+            }
+
+            // Powerup collision
+            for (let i = powerups.length - 1; i >= 0; i--) {
+                let pow = powerups[i];
+                let dist = Math.hypot(ball.x - pow.x, ball.y - pow.y);
+                if (dist < ball.r + pow.r) {
+                    playPowerupSound();
+                    spawnParticles(pow.x, pow.y, "#fff", 25);
+
+                    if (pow.type === 'BIG') {
+                        if (ball.dx > 0) { 
+                            p1.h = 160; 
+                            addFloatingText("P1 PADDLE XL", 80, p1.y); 
+                        } else { 
+                            p2.h = 160; 
+                            addFloatingText("AI PADDLE XL", GAME_WIDTH - 80, p2.y); 
+                        }
+                        setTimeout(() => { p1.h = PADDLE_HEIGHT; p2.h = PADDLE_HEIGHT; }, 8000);
+                    } else if (pow.type === 'FAST') {
+                        ball.dx *= 1.5; 
+                        ball.dy *= 1.5;
+                        addFloatingText("HYPER BALL!", pow.x, pow.y);
+                    } else if (pow.type === 'LASER') {
+                        lasers.push({ 
+                            x: ball.dx > 0 ? 30 : GAME_WIDTH - 30, 
+                            y: ball.dx > 0 ? p1.y + p1.h/2 : p2.y + p2.h/2, 
+                            dir: ball.dx > 0 ? 1 : -1 
+                        });
+                        addFloatingText("LASER SHOT!", pow.x, pow.y);
+                    } else if (pow.type === 'MULTI') {
+                        balls.push(createBall());
+                        addFloatingText("MULTI-BALL!", pow.x, pow.y);
+                    } else if (pow.type === 'SHIELD') {
+                        addFloatingText("SHIELD UP!", pow.x, pow.y);
+                        // Shield logic could be added here
+                    } else if (pow.type === 'SLOW') {
+                        ball.dx *= 0.6;
+                        ball.dy *= 0.6;
+                        addFloatingText("SLOW MOTION!", pow.x, pow.y);
+                    }
+                    powerups.splice(i, 1);
+                }
+            }
+
+            // Score
+            if(ball.x < 0) {
+                gameState.score2++;
+                gameState.maxRally = Math.max(gameState.maxRally, gameState.rally);
+                gameState.rally = 0;
+                playSound(150, 'sawtooth', 0.3);
+                triggerShake(18);
+                spawnParticles(0, ball.y, "#f00", 40);
+                balls.splice(bIdx, 1);
+                if (balls.length === 0) resetBalls();
+            } else if(ball.x > GAME_WIDTH) {
+                gameState.score1++;
+                gameState.maxRally = Math.max(gameState.maxRally, gameState.rally);
+                gameState.rally = 0;
+                playSound(700, 'sine', 0.3);
+                triggerShake(18);
+                spawnParticles(GAME_WIDTH, ball.y, "#0f0", 40);
+                balls.splice(bIdx, 1);
+                if (balls.length === 0) resetBalls();
+
+                // Check win condition (first to 11)
+                if (gameState.score1 >= 11 || gameState.score2 >= 11) {
+                    endGame();
+                }
+            }
+        }
+
+        // Laser logic
+        for (let i = lasers.length - 1; i >= 0; i--) {
+            let l = lasers[i];
+            l.x += l.dir * 16;
+            if (l.dir === 1 && l.x >= GAME_WIDTH - 25) {
+                if (l.y > p2.y && l.y < p2.y + p2.h) { 
+                    p2.h = Math.max(30, p2.h - 30); 
+                    addFloatingText("SHRINK!", GAME_WIDTH - 80, p2.y); 
+                }
+                lasers.splice(i, 1);
+            } else if (l.dir === -1 && l.x <= 25) {
+                if (l.y > p1.y && l.y < p1.y + p1.h) { 
+                    p1.h = Math.max(30, p1.h - 30); 
+                    addFloatingText("SHRINK!", 80, p1.y); 
+                }
+                lasers.splice(i, 1);
+            }
+        }
+
+        // Particles & text
+        for(let i = particles.length - 1; i >= 0; i--) {
+            let p = particles[i];
+            p.x += p.dx; p.y += p.dy;
+            p.life--;
+            if(p.life <= 0) particles.splice(i, 1);
+        }
+
+        for(let i = floatingTexts.length - 1; i >= 0; i--) {
+            let ft = floatingTexts[i];
+            ft.y -= 1.5; 
+            ft.life--; 
+            ft.alpha = ft.life / 60;
+            if(ft.life <= 0) floatingTexts.splice(i, 1);
+        }
+
+        // AI logic
+        if (gameState.mode === 'vs-ai' && balls.length > 0) {
+            let primaryBall = balls[0];
+            let settings = difficultySettings[gameState.difficulty];
+            let aiSpeed = settings.aiSpeed;
+            let aiLead = gameState.difficulty === 'insane' ? 25 : gameState.difficulty === 'hard' ? 15 : 10;
+
+            if (p2.y + p2.h/2 < primaryBall.y - aiLead) p2.y += aiSpeed;
+            else if (p2.y + p2.h/2 > primaryBall.y + aiLead) p2.y -= aiSpeed;
+            
+            p2.y = Math.max(0, Math.min(GAME_HEIGHT - p2.h, p2.y));
+        }
+
+        // Update UI
+        document.getElementById('p1-score').innerText = gameState.score1;
+        document.getElementById('p2-score').innerText = gameState.score2;
+        document.getElementById('rally-display').innerText = 'RALLY: ' + gameState.rally;
+        updateBoostBars();
+    }
+
+    function updateBoostBars() {
+        let p1Bar = Math.ceil((p1.boost / 100) * 5);
+        let p2Bar = Math.ceil((p2.boost / 100) * 5);
+        document.getElementById('p1-boost-bar').innerText = '■'.repeat(p1Bar) + '□'.repeat(5 - p1Bar);
+        document.getElementById('p2-boost-bar').innerText = '■'.repeat(p2Bar) + '□'.repeat(5 - p2Bar);
+    }
+
+    // ===== DRAWING =====
+    function draw() {
+        ctx.save();
+
+        if (shakeTime > 0) {
+            let dx = (Math.random() - 0.5) * shakeTime;
+            let dy = (Math.random() - 0.5) * shakeTime;
+            ctx.translate(dx, dy);
+            shakeTime--;
+        }
+
+        // Clear canvas
+        ctx.fillStyle = "#000";
+        ctx.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
+
+        // Center line
+        ctx.strokeStyle = "rgba(0, 255, 0, 0.15)";
+        ctx.setLineDash([8, 8]);
+        ctx.beginPath();
+        ctx.moveTo(GAME_WIDTH / 2, 0);
+        ctx.lineTo(GAME_WIDTH / 2, GAME_HEIGHT);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Balls with trail
+        for (let ball of balls) {
+            for (let i = 0; i < ball.trail.length; i++) {
+                let t = ball.trail[i];
+                ctx.fillStyle = `rgba(0, 255, 0, ${(i + 1) / ball.trail.length * 0.4})`;
+                ctx.beginPath();
+                ctx.arc(t.x, t.y, ball.r * ((i + 1) / ball.trail.length), 0, Math.PI * 2);
                 ctx.fill();
             }
-
-            ctx.fillStyle = p1BoostActive ? "#fff" : "#0f0";
-            ctx.fillRect(15, p1y, pw, p1h);
-            ctx.fillStyle = "#f00";
-            ctx.fillRect(canvas.width - 25, p2y, pw, p2h);
-
-            for (let pow of powerups) {
-                pow.pulse += 0.05;
-                let r = pow.r + Math.sin(pow.pulse) * 3;
-                ctx.strokeStyle = "#0f0"; ctx.lineWidth = 2;
-                ctx.beginPath(); ctx.arc(pow.x, pow.y, r, 0, Math.PI * 2); ctx.stroke();
-                ctx.font = "12px monospace"; ctx.fillStyle = "#0f0"; ctx.textAlign = "center";
-                ctx.fillText(pow.type, pow.x, pow.y + 4);
-            }
-
-            ctx.fillStyle = "#f0f";
-            for (let l of lasers) { ctx.fillRect(l.x, l.y - 3, 20, 6); }
-
-            for (let p of particles) {
-                ctx.fillStyle = p.color;
-                ctx.fillRect(p.x, p.y, 4, 4);
-            }
-
-            for (let ft of floatingTexts) {
-                ctx.font = "14px monospace";
-                ctx.fillStyle = `rgba(0, 255, 0, ${ft.alpha})`;
-                ctx.fillText(ft.txt, ft.x, ft.y);
-            }
-
-            ctx.restore();
+            ctx.fillStyle = "#0f0";
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI*2);
+            ctx.fill();
         }
 
-        function loop() {
-            if(running) {
-                update();
-                draw();
-                requestAnimationFrame(loop);
-            }
+        // Paddles
+        ctx.fillStyle = p1.boostActive ? "#fff" : "#0f0";
+        ctx.shadowColor = p1.boostActive ? "rgba(255, 255, 255, 0.5)" : "rgba(0, 255, 0, 0.3)";
+        ctx.shadowBlur = p1.boostActive ? 20 : 10;
+        ctx.fillRect(15, p1.y, PADDLE_WIDTH, p1.h);
+
+        ctx.fillStyle = p2.boostActive ? "#fff" : "#f00";
+        ctx.shadowColor = p2.boostActive ? "rgba(255, 255, 255, 0.5)" : "rgba(255, 0, 0, 0.3)";
+        ctx.shadowBlur = p2.boostActive ? 20 : 10;
+        ctx.fillRect(GAME_WIDTH - 25, p2.y, PADDLE_WIDTH, p2.h);
+        ctx.shadowBlur = 0;
+
+        // Powerups
+        for (let pow of powerups) {
+            pow.pulse += 0.05;
+            let r = pow.r + Math.sin(pow.pulse) * 4;
+            ctx.strokeStyle = "#0f0";
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(pow.x, pow.y, r, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.font = "bold 12px monospace";
+            ctx.fillStyle = "#0f0";
+            ctx.textAlign = "center";
+            ctx.fillText(pow.type, pow.x, pow.y + 4);
         }
-    </script>
+
+        // Lasers
+        ctx.fillStyle = "#f0f";
+        for (let l of lasers) {
+            ctx.shadowColor = "rgba(255, 0, 255, 0.8)";
+            ctx.shadowBlur = 10;
+            ctx.fillRect(l.x - 10, l.y - 3, 20, 6);
+        }
+        ctx.shadowBlur = 0;
+
+        // Particles
+        for (let p of particles) {
+            ctx.fillStyle = p.color;
+            ctx.globalAlpha = p.life / 30;
+            ctx.fillRect(p.x, p.y, 4, 4);
+            ctx.globalAlpha = 1;
+        }
+
+        // Floating text
+        for (let ft of floatingTexts) {
+            ctx.font = "bold 16px monospace";
+            ctx.fillStyle = `rgba(0, 255, 0, ${ft.alpha})`;
+            ctx.textAlign = "center";
+            ctx.fillText(ft.txt, ft.x, ft.y);
+        }
+
+        ctx.restore();
+    }
+
+    // ===== GAME FLOW =====
+    function resetBalls() {
+        setTimeout(() => {
+            balls = [createBall()];
+        }, 500);
+    }
+
+    function startGame() {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        
+        document.getElementById('menu-screen').classList.add('hidden');
+        document.getElementById('game-screen').classList.remove('hidden');
+        
+        gameState.isRunning = true;
+        gameState.score1 = 0;
+        gameState.score2 = 0;
+        gameState.rally = 0;
+        gameState.maxRally = 0;
+        gameState.maxSpeed = 0;
+        
+        p1.y = GAME_HEIGHT / 2 - PADDLE_HEIGHT / 2;
+        p2.y = GAME_HEIGHT / 2 - PADDLE_HEIGHT / 2;
+        p1.h = PADDLE_HEIGHT;
+        p2.h = PADDLE_HEIGHT;
+        p1.boost = 100;
+        p2.boost = 100;
+        balls = [createBall()];
+        particles = [];
+        powerups = [];
+        lasers = [];
+        floatingTexts = [];
+
+        document.getElementById('p2-name').innerText = gameState.mode === 'vs-ai' ? 'AI' : 'P2';
+        document.getElementById('mode-display').innerText = gameState.mode === 'vs-ai' ? 'VS AI' : '2 PLAYER';
+        document.getElementById('difficulty-display').innerText = gameState.difficulty.toUpperCase();
+
+        loop();
+    }
+
+    function togglePause() {
+        gameState.isPaused = !gameState.isPaused;
+        document.getElementById('pause-overlay').classList.toggle('active');
+    }
+
+    function endGame() {
+        gameState.isRunning = false;
+        let winner = gameState.score1 > gameState.score2 ? 'P1' : 'AI/P2';
+        let winnerName = gameState.score1 > gameState.score2 ? 'P1 WINS' : (gameState.mode === 'vs-ai' ? 'AI WINS' : 'P2 WINS');
+
+        document.getElementById('game-over-text').innerText = winnerName;
+        document.getElementById('winner-text').innerText = `Winner: ${winner}`;
+        document.getElementById('final-score').innerText = `Score: ${gameState.score1} - ${gameState.score2}`;
+        document.getElementById('final-stats').innerText = `Max Rally: ${gameState.maxRally} | Max Speed: ${Math.round(gameState.maxSpeed * 10) / 10}`;
+        document.getElementById('game-over-overlay').classList.add('active');
+    }
+
+    function restartGame() {
+        document.getElementById('game-over-overlay').classList.remove('active');
+        startGame();
+    }
+
+    function returnToMenu() {
+        gameState.isRunning = false;
+        gameState.isPaused = false;
+        document.getElementById('game-screen').classList.add('hidden');
+        document.getElementById('menu-screen').classList.remove('hidden');
+        document.getElementById('pause-overlay').classList.remove('active');
+        document.getElementById('game-over-overlay').classList.remove('active');
+        keys = {};
+    }
+
+    function loop() {
+        if(gameState.isRunning && !gameState.isPaused) {
+            update();
+            draw();
+        }
+        if(gameState.isRunning) {
+            requestAnimationFrame(loop);
+        }
+    }
+
+    // ===== MENU HANDLERS =====
+    document.querySelectorAll('.menu-button[data-mode]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.menu-button[data-mode]').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            gameState.mode = btn.dataset.mode;
+        });
+    });
+
+    document.querySelectorAll('.menu-button[data-difficulty]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.menu-button[data-difficulty]').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            gameState.difficulty = btn.dataset.difficulty;
+        });
+    });
+
+    document.querySelectorAll('.menu-button[data-controls]').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.menu-button[data-controls]').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            gameState.controlMode = btn.dataset.controls;
+            updateControlsDisplay();
+        });
+    });
+
+    function updateControlsDisplay() {
+        let display = document.getElementById('controls-display');
+        if (gameState.controlMode === 'mouse') {
+            display.innerHTML = `
+                <strong>MOUSE MODE:</strong><br>
+                Move mouse to control paddle | SPACEBAR = Boost<br>
+                <br>
+                <strong>GENERAL:</strong><br>
+                P = Pause | ESC = Menu
+            `;
+        } else {
+            display.innerHTML = `
+                <strong>KEYBOARD MODE:</strong><br>
+                P1: W/S or UP/DOWN Arrow Keys<br>
+                P1 BOOST: SPACEBAR<br>
+                <br>
+                P2: I/K or UP/DOWN Arrow Keys<br>
+                P2 BOOST: LEFT SHIFT<br>
+                <br>
+                P = Pause | ESC = Menu
+            `;
+        }
+    }
+
+    document.getElementById('start-btn').addEventListener('click', startGame);
+
+    updateControlsDisplay();
+</script>
+
 </body>
 </html>
